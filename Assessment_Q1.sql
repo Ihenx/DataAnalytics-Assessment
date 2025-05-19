@@ -1,23 +1,5 @@
-SELECT 
-    uc.id owner_id,
-    CONCAT_WS(' ', uc.first_name, uc.last_name) name,
-    SUM(pp.is_regular_savings) AS savings_count,
-    SUM(pp.is_a_fund) AS investment_count,
-    SUM(sa.amount) transaction_deposit
-FROM
-    users_customuser uc
-        JOIN
-    plans_plan pp ON uc.id = pp.owner_id
-        JOIN
-    savings_savingsaccount sa ON pp.id = sa.plan_id
-GROUP BY uc.id , CONCAT_WS(' ', uc.first_name, uc.last_name)
-HAVING SUM(pp.is_regular_savings) > 0
-    AND SUM(pp.is_a_fund) > 0
-ORDER BY transaction_deposit DESC;
 
-
-
--- Select the user ID and full name (first + last name)
+-- Select the user ID and concatenate first_name and last_name
 SELECT 
     uc.id AS owner_id,
     CONCAT_WS(' ', uc.first_name, uc.last_name) AS name,
@@ -29,8 +11,7 @@ SELECT
     SUM(pp.is_a_fund) AS investment_count,
 
     -- Sum the total transaction amount from all associated savings accounts
-    SUM(sa.amount) AS transaction_deposit
-
+ROUND(SUM(COALESCE(sa.amount, 0)), 2) AS transaction_deposit
 -- The data comes from the 'users_customuser' table (aliased as uc)
 FROM
     users_customuser uc
