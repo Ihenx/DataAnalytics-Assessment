@@ -1,5 +1,5 @@
 -- Step 1: Create a Common Table Expression (CTE) to get the last activity date for each plan
-WITH last_days AS (
+WITH last_one_year AS (
 
     SELECT 
         pp.id AS plan_id,                  -- Unique ID of the plan
@@ -22,7 +22,7 @@ SELECT
     DATEDIFF(CURDATE(), ld.last_activity_date) AS inactivity_days 
         -- Calculate the number of days since the last transaction
 FROM
-    last_days ld
+    last_one_year ld
 WHERE 
     last_activity_date IS NULL            -- Include plans that have never had a transaction
     OR DATEDIFF(CURDATE(), ld.last_activity_date) > 365
