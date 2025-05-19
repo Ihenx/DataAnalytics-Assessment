@@ -214,3 +214,58 @@ This condition includes two types of plans:
 * Those with NULL last activity (no transaction at all).
 
 * Those whose last activity was over a year ago.
+
+ 
+# Assesment 4
+## Task 
+ For each customer, assuming the profit_per_transaction is 0.1% of the transaction value, calculate:
+Account tenure (months since signup)
+Total transactions
+Estimated CLV (Assume: CLV = (total_transactions / tenure) * 12 * avg_profit_per_transaction)
+Order by estimated CLV from highest to lowest
+```
+    WITH avg_profit_transaction_cte AS (
+     SELECT 
+            uc.id,
+            CONCAT_WS(' ', first_name, last_name) AS name,  -- Combine first and last name
+            TIMESTAMPDIFF(MONTH, uc.date_joined, CURDATE()) AS tenure,  -- Calculate user tenure in months
+            AVG(sa.amount * 0.001) AS avg_profit_per_transaction,  -- Assume 0.1% profit on each transaction
+            COUNT(*) AS total_transaction  -- Total number of transactions
+        FROM
+            users_customuser uc
+            JOIN savings_savingsaccount sa ON uc.id = sa.owner_id
+        GROUP BY 
+            uc.id, first_name, last_name
+    )
+```
+* Selecting the unique ID of the user from the `users_customuser` table
+* CONCAT_WS() joins the first_name and last_name into a single string separated by a space.This forms the full name of each user.
+
+Calculates how long a user has been with the platform:
+
+* TIMESTAMPDIFF(MONTH, start_date, end_date) returns the difference in months.
+
+* From date_joined (when user registered) to today (CURDATE()).
+
+* Result is called tenure.
+* Assumes that for every transaction, the platform earns 0.1% profit.
+
+* This multiplies each transaction amount by 0.001 to estimate profit, and then calculates the average profit per transaction.
+* Counts the total number of transactions a user has made.
+* Joins users_customuser (users) with savings_savingsaccount (transactions) based on the user ID.
+* Groups data by each user’s ID and name so you can aggregate (AVG, COUNT) their transaction info properly.
+```
+    -- Final SELECT to estimate CLV
+    SELECT 
+        id,
+        name,
+        avg_profit_per_transaction,
+        total_transaction,
+        ROUND(((total_transaction / tenure) * 12 * avg_profit_per_transaction), 0) AS estimated_clv
+    FROM
+        avg_profit_transaction_cte apt
+    ORDER BY 
+        estimated_clv DESC;
+```
+This draws data from your previously defined CTE (avg_profit_transaction_cte) that already calculated tenure, avg_profit_per_transaction, and total_transaction for each user.With the estimated CLV calculated
+* Sorts the results in descending order, so the users with the highest projected CLV appear at the top of the list.
