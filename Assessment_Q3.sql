@@ -4,7 +4,7 @@ WITH last_days AS (
     SELECT 
         pp.id AS plan_id,                  -- Unique ID of the plan
         pp.owner_id,                       -- ID of the plan owner (user)
-        pp.name AS type,                   -- Name/type of the plan
+        pp.description AS type,                   -- Name/type of the plan
         MAX(sa.transaction_date) AS last_activity_date  -- Most recent transaction date (if any) for the plan
     FROM
         plans_plan pp
@@ -25,7 +25,7 @@ FROM
     last_days ld
 WHERE 
     last_activity_date IS NULL            -- Include plans that have never had a transaction
-    OR DATEDIFF(CURDATE(), ld.last_activity_date) <= 365
+    OR DATEDIFF(CURDATE(), ld.last_activity_date) > 365
         -- Or include plans that had activity within the last 365 days
 ORDER BY 
     inactivity_days DESC;                 -- Show most inactive plans (within 365 days) at the top
