@@ -1,5 +1,5 @@
 # Assesment 1
-## The Purspose of this Query
+## Task
 Write a query to find customers with at least one funded savings plan AND one funded investment plan, sorted by total deposits.
 Tables:
 users_customuser
@@ -56,5 +56,161 @@ ORDER BY transaction_deposit DESC;
 ```
 * Sorts the results in descending order of total transaction deposits. So  that users who have transacted the most are shown at the top.
 
+# Assesment 2
 
+In this SQL project created a user-defined function (frequencyCategory)  that categorizes customers based on the average number of transactions per month. This can be useful in customer segmentation.
 
+## Task
+* Businesses often need to segment users based on how frequently they transact. This SQL solution:
+
+* Calculates each user's average monthly transaction count
+
+* Uses a custom function to assign a frequency category:
+
+* High Frequency: 10 or more transactions/month
+
+* Medium Frequency: 3 to 9 transactions/month
+
+* Low Frequency: Less than 3 transactions/month
+
+      ```
+          DELIMITER $$
+            CREATE FUNCTION frequencyCategory(
+            avg_transaction_count DECIMAL(10,2)
+        ) RETURNS VARCHAR(20)
+        DETERMINISTIC
+        BEGIN
+            DECLARE frequencyCategory VARCHAR(20);
+        
+            IF avg_transaction_count >= 10 THEN
+                SET frequencyCategory = "High Frequency";
+            ELSEIF avg_transaction_count >= 3 THEN
+                SET frequencyCategory = "Medium Frequency";
+            ELSE
+                SET frequencyCategory = "Low Frequency";
+            END IF;
+        
+            RETURN frequencyCategory;
+        END $$
+        DELIMITER ;
+    ```
+###  Parameters
+avg_transaction_count: Average number of monthly transactions per user (decimal).
+
+### Returns
+A VARCHAR representing the frequency category:
+
+"High Frequency": 10 or more transactions/month
+
+"Medium Frequency": 3 to 9 transactions/month
+
+"Low Frequency": Less than 3 transactions/month
+
+### Query Workflow
+* 1 CTE: monthly_transaction
+Groups all transactions by user and month
+```
+    WITH monthly_transaction AS (
+        SELECT 
+            sa.owner_id,
+            DATE_FORMAT(pp.start_date, '%Y-%m') AS transaction_month,
+            COUNT(*) AS transaction_count
+        FROM
+            plans_plan pp
+        JOIN
+            savings_savingsaccount sa ON pp.id = sa.plan_id
+        GROUP BY 
+            sa.owner_id, DATE_FORMAT(pp.start_date, '%Y-%m')
+    )
+```
+*  CTE: avg_monthly_transaction
+Aggregates and calculates:
+
+Total number of transactions per user
+
+Average number of transactions per active month
+        ```
+            avg_monthly_transaction AS (
+                SELECT 
+                    mt.owner_id, 
+                    SUM(mt.transaction_count) AS customer_count,
+                    SUM(mt.transaction_count) / COUNT(DISTINCT mt.transaction_month) AS avg_transaction_count
+                FROM 
+                    monthly_transaction mt
+                GROUP BY 
+                    mt.owner_id
+            )
+        ```
+Applies the frequencyCategory() function
+
+Outputs:
+
+Frequency category
+
+Total transaction count
+
+Average monthly transactions
+    ```
+        SELECT 
+            frequencyCategory(avg_transaction_count) AS Frequency_Category,
+            amt.customer_count,
+            amt.avg_transaction_count
+        FROM 
+            avg_monthly_transaction amt;
+    ```
+
+# Assesment 3
+This SQL script identifies inactive savings or investment plans by calculating the number of days since their last transaction. It includes 
+* Plans whose last transaction was more than 365 days ago.
+
+  ```
+  WITH last_days AS (
+    SELECT 
+        pp.id AS plan_id,                  -- Unique ID of the plan
+        pp.owner_id,                       -- ID of the plan owner (user)
+        pp.description AS type,            -- Name/type of the plan
+        MAX(sa.transaction_date) AS last_activity_date  -- Most recent transaction date (if any)
+
+    ```
+You're selecting fields from the plans_plan table:
+
+`plan_id`: the unique plan identifier.
+
+`owner_id`: the user who owns this plan.
+
+`type`: the description or type of the plan (e.g., "Fixed Deposit", "Mutual Fund").
+
+`last_activity_date`: calculated as the most recent transaction for this plan, using MAX(transaction_date).
+```
+    FROM
+        plans_plan pp
+    LEFT JOIN savings_savingsaccount sa ON pp.id = sa.plan_id
+    GROUP BY 
+        pp.id, pp.owner_id, pp.name
+)
+```
+Use the CTE to find plans inactive for over a year
+```
+SELECT 
+    plan_id,                              -- ID of the plan
+    owner_id,                             -- ID of the plan owner
+    type,                                 -- Plan type or description
+    DATEDIFF(CURDATE(), ld.last_activity_date) AS inactivity_days
+FROM
+    last_days ld
+```
+Here, you're querying the last_days CTE:
+
+DATEDIFF(CURDATE(), last_activity_date) calculates the number of days between today and the last transaction date.
+```
+WHERE 
+    last_activity_date IS NULL            -- Include plans that have NEVER had a transaction
+    OR DATEDIFF(CURDATE(), ld.last_activity_date) > 365
+ORDER BY 
+    inactivity_days DESC;
+```
+This condition includes two types of plans:
+
+* Those with NULL last activity (no transaction at all).
+
+* Those whose last activity was over a year ago.
