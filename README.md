@@ -72,6 +72,7 @@ In this SQL project created a user-defined function (frequencyCategory)  that ca
 * Medium Frequency: 3 to 9 transactions/month
 
 * Low Frequency: Less than 3 transactions/month
+  
 
       ```
           DELIMITER $$
